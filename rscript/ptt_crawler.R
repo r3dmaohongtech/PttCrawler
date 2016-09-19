@@ -144,7 +144,7 @@ ptt_article_crawler <- function(x = ""){
     })
   }
   cat("\n ")
-  cat(forum_name,' : ',nrow(ptt_df),' articles.')
+  cat(forum_name,' : ',nrow(ptt_df),' articles.\n')
   
   ptt_df = unique(ptt_df)
   
