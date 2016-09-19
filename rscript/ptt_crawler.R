@@ -23,14 +23,14 @@ ptt_list_crawler <- function(link, min=1, max=9999999, forum_name = paste0('ptt 
       ##articles' url
       article_url <- read_html(url) %>% html_nodes(".title") %>% html_nodes("a") %>% html_attr('href')
       
-      article_url_list <- c(article_url_list,article_url)
+      article_url_list <- c(article_url_list, article_url)
       gc() 
       cat("\r ", forum_name, "- Page: ", i)
       Sys.sleep(runif(1,2,5))
-      
       e <- i
     }, error = function(e) {
       #conditionMessage(e)
+      list_re_crawl()
     })
     ## Has Accessed the last page: break
     if(e!=i & max==9999999){
@@ -179,4 +179,18 @@ ptt_article_crawler <- function(x = ""){
   mapply(assign, as.character(substitute(x)[-1]), y,
          MoreArgs = list(envir = parent.frame()))
   invisible()
+}
+
+##try again when facing error..
+list_re_crawl <-function(){
+  tryCatch({
+    Sys.sleep(runif(1,5,7)) 
+    article_url <- read_html(url) %>% html_nodes(".title") %>% html_nodes("a") %>% html_attr('href')
+    
+    article_url_list <<- c(article_url_list, article_url)
+    gc() 
+    cat("\r ", forum_name, "- Page: ", i)
+    e <<- i
+  }, error = function(e) {
+  })
 }
