@@ -37,7 +37,6 @@ ptt_list_crawler <- function(link, min=1, max=9999999, forum_name = paste0('ptt 
       
       cat("\nstart...")
       status <<- list_re_crawl(url, article_url_list, forum_name, i)
-      cat("\n", status)
     })
     if(status=="success")
       check <- i
