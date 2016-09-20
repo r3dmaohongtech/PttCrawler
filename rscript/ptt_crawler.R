@@ -110,6 +110,7 @@ ptt_article_crawler <- function(x = ""){
   cat("\n\nCreate output folders...")
   dir.create(paste0(".\\output\\", forum_name, "\\raw data\\tmp"), showWarnings = FALSE, recursive = TRUE)
   
+  fail_list <- c()
   ##Start to crawl out the content...
   for(i in start:nrow(ptt_df)){
     tryCatch({
@@ -141,6 +142,7 @@ ptt_article_crawler <- function(x = ""){
       #write.csv(ptt_df, paste0(".\\output\\", forum_name, "\\raw data\\tmp\\", forum_name,"_", min, "_", max, "_tmp.csv"), row.names=FALSE)
       
       ##df to json
+      ##creating json tmp output will slow down the procedure...
       json_ptt <- toJSON(unname(split(ptt_df, 1:nrow(ptt_df))))#, "R")
       
       #cat(json_ptt)
@@ -149,13 +151,22 @@ ptt_article_crawler <- function(x = ""){
       cat("\r PTT article: ",i, " ==>", i/nrow(ptt_df)*100, "% completed.",paste(replicate(50, " "), collapse = ""))
       Sys.sleep(runif(1, 4, 6))
       
-      }, error = function(e) {
+    }, error = function(e) {
+      fail_list <<- c(fail_list, i)
       cat("\n ")
       cat("\n", forum_name, " PTT article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
       Sys.sleep(runif(1, 4, 6))
     })
   }
   cat("\n ")
+  
+  ##try again
+  if(!is.null(fail_list)){
+    for(i in fail_list){
+      ptt_df <- content_re_crawler(i, ptt_df)
+    }
+  }
+  
   cat(forum_name,' : ',nrow(ptt_df),' articles.\n')
   
   ptt_df = unique(ptt_df)
@@ -180,7 +191,6 @@ ptt_article_crawler <- function(x = ""){
     json_ptt <- toJSON(unname(split(spt_ptt_df[[1]] %>% select(-split_id), 1:nrow(spt_ptt_df[[1]] %>% select(-split_id)))), "R")
     #cat(json_ptt)
     write(json_ptt, file(paste0(".\\output\\", forum_name,"\\raw data\\", forum_name,"_", min, "_", max, ".json"), encoding="UTF-8"))
-    
   }
   
   return(ptt_df)
@@ -207,4 +217,51 @@ list_re_crawl <-function(url, article_url_list, forum_name, i){
     cat("\n ", forum_name, "failed. - Page: ", i, "\n")
     return("failure")
   })
+}
+
+##
+content_re_crawler <- function(i, ptt_df){
+  tryCatch({
+    url       <- ptt_df$Url[i]
+    total_css <- read_html(url) 
+    
+    content_css <- total_css %>% html_nodes("#main-content") %>% html_text() %>% toUTF8
+    content <- substr(content_css, gregexpr("\n", content_css, fixed=TRUE)[[1]][1], gregexpr("發信站: 批踢踢實業坊(ptt.cc)", content_css, fixed=TRUE)[[1]][1] - 3)
+    
+    meta_value  <- total_css %>% html_nodes(".article-meta-value") %>% html_text() %>% toUTF8
+    if(length(meta_value)==4){
+      author <- meta_value[1]
+      title  <- meta_value[3]
+      date   <- meta_value[4]
+    }
+    
+    reply_msg <- total_css %>% html_nodes(".push-content") %>% html_text() %>% 
+      paste(., collapse="\n") %>% toUTF8
+    reply_id  <- total_css %>% html_nodes(".push-userid") %>% html_text() %>% paste(., collapse="\n")
+    
+    ptt_df$Title[i]    <- title
+    ptt_df$Date[i]     <- date
+    ptt_df$Author[i]   <- author
+    ptt_df$Content[i]  <- content
+    ptt_df$Reply[i]    <- reply_msg
+    ptt_df$Repliers[i] <- reply_id
+    
+    gc()
+    #write.csv(ptt_df, paste0(".\\output\\", forum_name, "\\raw data\\tmp\\", forum_name,"_", min, "_", max, "_tmp.csv"), row.names=FALSE)
+    
+    ##df to json
+    json_ptt <- toJSON(unname(split(ptt_df, 1:nrow(ptt_df))))#, "R")
+    
+    #cat(json_ptt)
+    write(json_ptt, file(paste0(".\\output\\", forum_name, "\\raw data\\tmp\\", forum_name,"_", min, "_", max, "_tmp.json"), encoding="UTF-8"))
+    
+    cat("\r PTT article: ",i, " ==>", i/nrow(ptt_df)*100, "% completed.",paste(replicate(50, " "), collapse = ""))
+    Sys.sleep(runif(1, 4, 6))
+    
+  }, error = function(e) {
+    cat("\n ")
+    cat("\n", forum_name, " PTT article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
+    Sys.sleep(runif(1, 4, 6))
+  })
+  return(ptt_df)
 }
