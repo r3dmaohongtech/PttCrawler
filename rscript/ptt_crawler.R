@@ -20,20 +20,31 @@ ptt_list_crawler <- function(link, min=1, max=9999999, forum_name = paste0('ptt 
     tmp <- paste(i, ".html", sep="")
     url <- paste(link, tmp, sep="")
     tryCatch({
-      ##articles' url
-      article_url <- read_html(url) %>% html_nodes(".title") %>% html_nodes("a") %>% html_attr('href')
+      cat("\r ", forum_name, "- Page: ", i)
       
+      ##articles' url
+      article_url      <- read_html(url) %>% html_nodes(".title") %>% html_nodes("a") %>% html_attr('href')
       article_url_list <- c(article_url_list, article_url)
       gc() 
-      cat("\r ", forum_name, "- Page: ", i)
-      Sys.sleep(runif(1,2,5))
-      e <- i
+      Sys.sleep(runif(1,4,6))
+      #check <- i
+      status <<- "success"
     }, error = function(e) {
       #conditionMessage(e)
-      list_re_crawl()
+      cat("\ntry again...")
+      cat("\nwait for about 2 mins...")
+      Sys.sleep(runif(1,120,130))
+      
+      cat("\nstart...")
+      status <<- list_re_crawl(url, article_url_list, forum_name, i)
+      cat("\n", status)
     })
+    if(status=="success")
+      check <- i
     ## Has Accessed the last page: break
-    if(e!=i & max==9999999){
+    if(check!=i & max==9999999){
+      #cat("\ncheck=",check)
+      #cat("\ni=",i)
       break
     }
   }
@@ -135,12 +146,12 @@ ptt_article_crawler <- function(x = ""){
       #cat(json_ptt)
       write(json_ptt, file(paste0(".\\output\\", forum_name, "\\raw data\\tmp\\", forum_name,"_", min, "_", max, "_tmp.json"), encoding="UTF-8"))
       
-      Sys.sleep(runif(1,2,5))
+      Sys.sleep(runif(1, 4, 6))
       cat("\r PTT article: ",i, " ==>", i/nrow(ptt_df)*100, "% completed.",paste(replicate(50, " "), collapse = ""))
     }, error = function(e) {
       cat("\n ")
       cat("\n", forum_name, " PTT article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
-      Sys.sleep(runif(1,2,5))
+      Sys.sleep(runif(1, 4, 6))
     })
   }
   cat("\n ")
@@ -182,15 +193,17 @@ ptt_article_crawler <- function(x = ""){
 }
 
 ##try again when facing error..
-list_re_crawl <-function(){
+list_re_crawl <-function(url, article_url_list, forum_name, i){
   tryCatch({
-    Sys.sleep(runif(1,5,7)) 
+    Sys.sleep(runif(1, 15, 17)) 
     article_url <- read_html(url) %>% html_nodes(".title") %>% html_nodes("a") %>% html_attr('href')
     
     article_url_list <<- c(article_url_list, article_url)
     gc() 
-    cat("\r ", forum_name, "- Page: ", i)
-    e <<- i
+    cat("\n ", forum_name, "- Page: ", i, "\n")
+    return("success")
   }, error = function(e) {
+    cat("\n ", forum_name, "failed. - Page: ", i, "\n")
+    return("failure")
   })
 }
