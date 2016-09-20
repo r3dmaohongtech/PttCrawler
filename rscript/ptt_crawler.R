@@ -41,7 +41,7 @@ ptt_list_crawler <- function(link, min=1, max=9999999, forum_name = paste0('ptt 
     if(status=="success")
       check <- i
     ## Has Accessed the last page: break
-    if(check!=i & max==9999999){
+    if(check!=i){
       #cat("\ncheck=",check)
       #cat("\ni=",i)
       break
@@ -141,13 +141,15 @@ ptt_article_crawler <- function(x = ""){
       #write.csv(ptt_df, paste0(".\\output\\", forum_name, "\\raw data\\tmp\\", forum_name,"_", min, "_", max, "_tmp.csv"), row.names=FALSE)
       
       ##df to json
-      json_ptt <- toJSON(unname(split(ptt_df, 1:nrow(ptt_df))), "R")
+      json_ptt <- toJSON(unname(split(ptt_df, 1:nrow(ptt_df))))#, "R")
+      
       #cat(json_ptt)
       write(json_ptt, file(paste0(".\\output\\", forum_name, "\\raw data\\tmp\\", forum_name,"_", min, "_", max, "_tmp.json"), encoding="UTF-8"))
       
-      Sys.sleep(runif(1, 4, 6))
       cat("\r PTT article: ",i, " ==>", i/nrow(ptt_df)*100, "% completed.",paste(replicate(50, " "), collapse = ""))
-    }, error = function(e) {
+      Sys.sleep(runif(1, 4, 6))
+      
+      }, error = function(e) {
       cat("\n ")
       cat("\n", forum_name, " PTT article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
       Sys.sleep(runif(1, 4, 6))
