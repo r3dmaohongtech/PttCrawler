@@ -155,6 +155,7 @@ ptt_article_crawler <- function(x = ""){
       fail_list <<- c(fail_list, i)
       cat("\n ")
       cat("\n", forum_name, " PTT article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
+      cat("\n ")
       Sys.sleep(runif(1, 4, 6))
     })
   }
