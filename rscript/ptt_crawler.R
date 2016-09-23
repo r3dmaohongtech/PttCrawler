@@ -67,6 +67,8 @@ ptt_list_crawler <- function(link, min=1, max=9999999, forum_name = paste0('ptt 
   return(output_list)
 }
 
+##
+##
 cat("\nptt_article_crawler <- function(x = \"\")")
 ptt_article_crawler <- function(x = ""){
   ##suppress warnings
@@ -75,24 +77,20 @@ ptt_article_crawler <- function(x = ""){
     forum_name <- x$forum_name
     min        <- x$min
     max        <- x$max
-    ptt_df     <- x$ptt_df
+    ptt_df     <- setDT(x$ptt_df)
     rm(x)
     
-    start <- 1 
+    start <- 1:nrow(ptt_df)
   }else{
     ##if x == "", user should select a file to continue crawling....
     cat("please select the tmp file which you want to keep on crawling...")
-    ptt_filename <- file.choose()
     
-    #ptt_df <- fread(ptt_filename)
-    dat <- lapply(fromJSON(file=ptt_filename), function(j) {
-      as.data.frame(replace(j, sapply(j, is.list), NA), stringsAsFactors=F)
-    })
-    ptt_df = do.call("rbind", dat)
+    ptt_df <- readJSON2DT(file.choose())
     
     options(warn = 0)
     ptt_df[is.na(ptt_df)] <- ""
-    start  <- which(ptt_df[, 2:6, with=FALSE]=="")[1]
+    setDT(ptt_df)
+    start  <- which(ptt_df$Title=="" & ptt_df$Date=="" & ptt_df$Author=="" & ptt_df$Content=="" & ptt_df$Reply=="" & ptt_df$Repliers=="")
     
     ptt_filename <- strsplit(ptt_filename, "[\\.]")[[1]][length(strsplit(ptt_filename, "[\\.]")[[1]])-1]
     
@@ -112,7 +110,7 @@ ptt_article_crawler <- function(x = ""){
   
   fail_list <- c()
   ##Start to crawl out the content...
-  for(i in start:nrow(ptt_df)){
+  for(i in start){
     tryCatch({
       url       <- ptt_df$Url[i]
       total_css <- read_html(url) 
@@ -148,13 +146,14 @@ ptt_article_crawler <- function(x = ""){
       #cat(json_ptt)
       write(json_ptt, file(paste0(".\\output\\", forum_name, "\\raw data\\tmp\\", forum_name,"_", min, "_", max, "_tmp.json"), encoding="UTF-8"))
       
-      cat("\r PTT article: ",i, " ==>", i/nrow(ptt_df)*100, "% completed.",paste(replicate(50, " "), collapse = ""))
+      cat("\r Ptt article: ",i, " ==>", i/nrow(ptt_df)*100, "% completed.",paste(replicate(50, " "), collapse = ""))
       Sys.sleep(runif(1, 4, 6))
       
     }, error = function(e) {
       fail_list <<- c(fail_list, i)
+      
       cat("\n ")
-      cat("\n", forum_name, " PTT article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
+      cat("\n", forum_name, " Ptt article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
       cat("\n ")
       Sys.sleep(runif(1, 4, 6))
     })
@@ -256,13 +255,21 @@ content_re_crawler <- function(i, ptt_df){
     #cat(json_ptt)
     write(json_ptt, file(paste0(".\\output\\", forum_name, "\\raw data\\tmp\\", forum_name,"_", min, "_", max, "_tmp.json"), encoding="UTF-8"))
     
-    cat("\r PTT article: ",i, " ==>", i/nrow(ptt_df)*100, "% completed.",paste(replicate(50, " "), collapse = ""))
+    cat("\r Ptt article: ",i, " ==>", i/nrow(ptt_df)*100, "% completed.",paste(replicate(50, " "), collapse = ""))
     Sys.sleep(runif(1, 4, 6))
     
   }, error = function(e) {
     cat("\n ")
-    cat("\n", forum_name, " PTT article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
+    cat("\n", forum_name, " Ptt article: ", i, " failed. ", i/nrow(ptt_df)*100, "%")
     Sys.sleep(runif(1, 4, 6))
   })
   return(ptt_df)
+}
+
+readJSON2DT <- function(filename){
+  dat <- lapply(fromJSON(file=filename), function(j) {
+    as.data.table(replace(j, sapply(j, is.list), NA), stringsAsFactors=F)
+  })
+  df = do.call("rbind", dat)
+  return(df)
 }
